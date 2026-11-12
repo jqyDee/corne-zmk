@@ -1,0 +1,8 @@
+# Makes this repo a Zephyr module so the vendored zmk-auto-layer behavior is
+# compiled in. ZMK's build workflow picks this file up automatically.
+name: corne-zmk
+build:
+  cmake: vendor/zmk-auto-layer
+  kconfig: vendor/zmk-auto-layer/Kconfig
+  settings:
+    dts_root: vendor/zmk-auto-layer

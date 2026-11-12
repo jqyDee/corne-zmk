@@ -1,0 +1,156 @@
+# keymap-drawer config (https://github.com/caksoylar/keymap-drawer)
+# Legends show what the German macOS layout types, not the US keycode names.
+parse_config:
+  trans_legend: { t: "", type: trans }
+
+  raw_binding_map:
+    # German-Mac symbols sent with modifiers (see config/de_mac.h)
+    "&kp LS(N1)": "!"
+    "&kp LS(N2)": '"'
+    "&kp LS(N3)": "§"
+    "&kp LS(N4)": "$"
+    "&kp LS(N5)": "%"
+    "&kp LS(N6)": "&"
+    "&kp LS(N7)": "/"
+    "&kp LS(N8)": "("
+    "&kp LS(N9)": ")"
+    "&kp LS(N0)": "="
+    "&kp LS(EQUAL)": "`"
+    "&kp LS(RBKT)": "*"
+    "&kp LS(FSLH)": "_"
+    "&kp LS(GRAVE)": ">"
+    "&kp LS(NUHS)": "'"
+    "&kp LA(L)": "@"
+    "&kp LA(N)": "~"
+    "&kp LA(N5)": "["
+    "&kp LA(N6)": "]"
+    "&kp LA(N7)": "|"
+    "&kp LA(N8)": "{"
+    "&kp LA(N9)": "}"
+    "&kp LS(LA(N7))": "\\"
+    "&kp LA(E)": "€"
+    "&hm_combo_lpar LS(RCTRL) 0": "(<"  # shift: <
+    "&hm_combo_rpar LA(RCTRL) 0": ")>"  # shift: >
+
+    # behaviors
+    "&num_dance": { t: "Num Word", s: "2×: sticky" }
+    "&sys_reset": Reset
+    "&bootloader": Boot
+    "&bt BT_SEL 0": BT 1
+    "&bt BT_SEL 1": BT 2
+    "&bt BT_SEL 2": BT 3
+    "&bt BT_SEL 3": BT 4
+    "&bt BT_CLR": BT Clear
+    "&tog 1": { t: COMBO, h: toggle }
+    "&tog 5": { t: NoHRM, h: toggle }
+
+    "&mmv MOVE_UP": Mouse ↑
+    "&mmv MOVE_DOWN": Mouse ↓
+    "&mmv MOVE_LEFT": Mouse ←
+    "&mmv MOVE_RIGHT": Mouse →
+    "&msc SCRL_UP": Scroll ↑
+    "&msc SCRL_DOWN": Scroll ↓
+    "&msc SCRL_LEFT": Scroll ←
+    "&msc SCRL_RIGHT": Scroll →
+    "&mkp LCLK": Left Click
+    "&mkp RCLK": Right Click
+
+  # Replaces keymap-drawer's default map, so unmapped keycodes show their name.
+  zmk_keycode_map:
+    # German layout: letters/keys that differ from the US keycode name
+    Y: Z
+    Z: Y
+    SEMI: Ö
+    SQT: Ä
+    LBKT: Ü
+    FSLH: "-"
+    MINUS: ß
+    EQUAL: ´
+    RBKT: "+"
+    NUHS: "#"
+    GRAVE: "<"
+    NUBS: "^"
+    COMMA: ","
+    DOT: "."
+    # US shifted-symbol names used on SYM -> what German types
+    EXCL: "!"
+    AT: '"'
+    HASH: "§"
+    DOLLAR: "$"
+    PERCENT: "%"
+    CARET: "&"
+    AMPS: "/"
+    STAR: "("
+    LPAR: ")"
+    RPAR: "="
+    UNDER: "?"
+    PLUS: "`"
+    TILDE2: "'"
+    LT: ";"
+    # numbers
+    N1: "1"
+    N2: "2"
+    N3: "3"
+    N4: "4"
+    N5: "5"
+    N6: "6"
+    N7: "7"
+    N8: "8"
+    N9: "9"
+    N0: "0"
+    # mods (Mac symbols)
+    LGUI: ⌘
+    LALT: ⌥
+    LCTRL: Ctrl
+    RCTRL: Ctrl
+    LSHFT: ⇧
+    LSHIFT: ⇧
+    # misc
+    TAB: Tab
+    ESC: Esc
+    RET: Enter
+    SPACE: Space
+    BSPC: Bspc
+    DEL: Del
+    CAPS: Caps
+    PG_UP: PgUp
+    PG_DN: PgDn
+    HOME: Home
+    END: End
+    UP: ↑
+    DOWN: ↓
+    LEFT: ←
+    RIGHT: →
+    GLOBE: Globe
+    C_MUTE: Mute
+    C_PP: Play
+    C_VOL_UP: Vol +
+    C_VOL_DN: Vol −
+    C_NEXT: Next
+    C_PREV: Prev
+
+draw_config:
+  dark_mode: false  # colors come from the gruvbox style below
+  n_columns: 2  # layers side by side, closer to a wallpaper shape
+  # Gruvbox dark (https://github.com/morhetz/gruvbox)
+  svg_extra_style: |
+    svg.keymap { fill: #ebdbb2; background-color: #282828; }
+    rect.key { fill: #3c3836; }
+    rect.key, rect.combo { stroke: #665c54; }
+    rect.combo, rect.combo-separate { fill: #458588; }
+    rect.held, rect.combo.held { fill: #9d0006; }
+    text.hold, text.shifted { fill: #a89984; }
+    text.combo { fill: #fbf1c7; }
+    text.layer-activator { fill: #8ec07c; }
+    text.trans { fill: #928374; }
+    text.label { fill: #fabd2f; stroke: #282828; }
+    text.footer { stroke: #282828; }
+    path.combo { stroke: #928374; }
+    /* overview corners: sym orange, num purple, nav blue */
+    text.tl { fill: #fe8019; }
+    text.tr { fill: #d3869b; }
+    text.bl { fill: #83a598; }
+  key_w: 60
+  key_h: 56
+  combo_w: 26
+  combo_h: 22
