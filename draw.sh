@@ -25,6 +25,7 @@ docker run --rm \
         python draw/postprocess.py
         keymap -c draw/config.yaml draw draw/keymap.yaml $KEYBOARD -s $LAYERS > draw/keymap.svg
         keymap -c draw/config.yaml draw draw/overview.yaml $KEYBOARD > draw/overview.svg
+        python draw/postprocess.py svg
     '
 
 if command -v rsvg-convert >/dev/null; then

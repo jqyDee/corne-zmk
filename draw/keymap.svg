@@ -136,10 +136,11 @@ text.trans { fill: #928374; }
 text.label { fill: #fabd2f; stroke: #282828; }
 text.footer { stroke: #282828; }
 path.combo { stroke: #928374; }
-/* overview corners: sym orange, num purple, nav blue */
-text.tl { fill: #fe8019; }
-text.tr { fill: #d3869b; }
-text.bl { fill: #83a598; }
+/* overview corners: sym orange, num purple, nav blue; title legend too */
+text.tl, tspan.tl { fill: #fe8019; }
+text.tr, tspan.tr { fill: #d3869b; }
+text.bl, tspan.bl { fill: #83a598; }
+tspan.combo-legend { fill: #458588; }
 </style>
 <g transform="translate(30, 0)" class="layer-base">
 <text x="0" y="28" class="label" id="base">base:</text>

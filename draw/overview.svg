@@ -136,13 +136,14 @@ text.trans { fill: #928374; }
 text.label { fill: #fabd2f; stroke: #282828; }
 text.footer { stroke: #282828; }
 path.combo { stroke: #928374; }
-/* overview corners: sym orange, num purple, nav blue */
-text.tl { fill: #fe8019; }
-text.tr { fill: #d3869b; }
-text.bl { fill: #83a598; }
+/* overview corners: sym orange, num purple, nav blue; title legend too */
+text.tl, tspan.tl { fill: #fe8019; }
+text.tr, tspan.tr { fill: #d3869b; }
+text.bl, tspan.bl { fill: #83a598; }
+tspan.combo-legend { fill: #458588; }
 </style>
-<g transform="translate(30, 0)" class="layer-overview:  ↖ sym   ↗ num   ↙ nav">
-<text x="0" y="28" class="label" id="overview:---sym----num----nav">overview:  ↖ sym   ↗ num   ↙ nav:</text>
+<g transform="translate(30, 0)" class="layer-overview:  sym  num  nav  combo">
+<text x="0" y="28" class="label" id="overview:--sym--num--nav--combo">overview:<tspan class="tl" dx="0.6em">sym</tspan><tspan class="tr" dx="0.6em">num</tspan><tspan class="bl" dx="0.6em">nav</tspan><tspan class="combo-legend" dx="0.6em">combo</tspan></text>
 <g transform="translate(0, 56)">
 <g transform="translate(52, 91)" class="key keypos-0">
 <rect rx="6" ry="6" x="-39" y="-39" width="78" height="78" class="key"/>

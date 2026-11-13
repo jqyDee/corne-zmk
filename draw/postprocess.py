@@ -3,8 +3,12 @@
 keymap.yaml:  move all combos onto the virtual "Combos" layer.
 overview.yaml: one combined layer, base legend in the middle and the other
                layers in the key corners (colors set in draw/config.yaml).
+
+With argument "svg" (after drawing): color the overview title legend.
 """
 import copy
+import re
+import sys
 
 import yaml
 
@@ -17,6 +21,19 @@ SHORT = {
     "Scroll ↑": "Sc↑", "Scroll ↓": "Sc↓", "Scroll ←": "Sc←", "Scroll →": "Sc→",
     "Left Click": "LClk", "Right Click": "RClk", "BT Clear": "BTclr",
 }
+
+TITLE = "overview:  " + "  ".join(CORNERS) + "  combo"
+
+if sys.argv[1:] == ["svg"]:
+    # title words in their corner/combo color instead of arrows
+    path = "draw/overview.svg"
+    svg = open(path).read()
+    words = [f'<tspan class="{c}" dx="0.6em">{l}</tspan>' for l, c in CORNERS.items()]
+    words.append('<tspan class="combo-legend" dx="0.6em">combo</tspan>')
+    svg = re.sub(r'(<text [^>]*class="label"[^>]*>)overview:[^<]*</text>',
+                 lambda m: m.group(1) + "overview:" + "".join(words) + "</text>", svg)
+    open(path, "w").write(svg)
+    sys.exit()
 
 path = "draw/keymap.yaml"
 d = yaml.safe_load(open(path))
@@ -44,9 +61,7 @@ for i, key in enumerate(d["layers"]["base"]):
     overview.append(key)
 
 o = copy.deepcopy(d)
-title = "overview:  " + "   ".join(
-    f"{'↖↗↙↘'['tl tr bl br'.split().index(c)]} {l}" for l, c in CORNERS.items()
-)
+title = TITLE
 o["layers"] = {title: overview}
 for c in o.get("combos", []):  # combos drawn right on the overview keyboard
     c["l"] = [title]
