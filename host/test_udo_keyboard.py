@@ -28,6 +28,9 @@ class EncodeTest(unittest.TestCase):
         self.assertEqual(uk.ascii_name("Übung Größe 🚀 extra lang"), b"Uebung Groesse  extra la")
         self.assertEqual(len(uk.ascii_name("x" * 40)), 24)
 
+    def test_control_characters_dropped(self):
+        self.assertEqual(uk.ascii_name("a\nb\tc\x7fd\x00e"), b"abcde")
+
     def test_negative_elapsed_clamped(self):
         packet = uk.encode(running("t", NOW + timedelta(minutes=5)), NOW)
         self.assertEqual(packet[4:8], bytes(4))
@@ -78,8 +81,11 @@ class FakeHid:
         self.log = []
 
     def enumerate(self):
-        return [{"usage_page": 0xFF60, "usage": 0x61, "path": b"dev1"},
-                {"usage_page": 0x0001, "usage": 0x06, "path": b"keyboard"}]
+        corne = {"vendor_id": 0x1D50, "product_id": 0x615E, "product_string": "Corne"}
+        return [{**corne, "usage_page": 0xFF60, "usage": 0x61, "path": b"dev1"},
+                {**corne, "usage_page": 0x0001, "usage": 0x06, "path": b"keyboard"},
+                {"vendor_id": 0x3434, "product_id": 0x0121, "product_string": "Other QMK board",
+                 "usage_page": 0xFF60, "usage": 0x61, "path": b"other-qmk"}]
 
     def device(self):
         return FakeDevice(self.log)
@@ -105,6 +111,25 @@ class SenderTest(unittest.TestCase):
         fake = FakeHid()
         fake.enumerate = lambda: []
         self.assertFalse(uk.Sender(hid_module=fake).send(SHARED_VECTOR))
+
+
+class HealthLogTest(unittest.TestCase):
+    def test_logs_only_on_transition(self):
+        health = uk.Health("udo")
+        with self.assertLogs("udo-status", level="INFO") as logs:
+            health.update(False, "udo status failed: boom")
+            health.update(False, "udo status failed: boom")
+            health.update(False, "udo status failed: boom")
+            health.update(True)
+            health.update(True)
+        self.assertEqual(len(logs.output), 2)
+        self.assertIn("boom", logs.output[0])
+        self.assertIn("udo ok", logs.output[1])
+
+    def test_first_success_is_silent(self):
+        health = uk.Health("udo")
+        with self.assertNoLogs("udo-status", level="INFO"):
+            health.update(True)
 
 
 class ChangeTest(unittest.TestCase):

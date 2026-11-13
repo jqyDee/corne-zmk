@@ -1,6 +1,6 @@
 """Send `udo status` to the Corne's right nice!view.
 
-Polls `udo status --json` every 10 s and sends a 20-byte packet as a raw HID
+Polls `udo status --json` every 10 s and sends a 32-byte packet as a raw HID
 report to the left (central) half, which relays it to the right half. Sends
 right away when the task starts, stops or changes, otherwise every 60 s as a
 heartbeat (the right half shows "udo ?" after 180 s without one).
@@ -24,6 +24,7 @@ from datetime import datetime, timezone
 MAGIC, VERSION = 0x55, 0x01
 PACKET_LEN, NAME_LEN, REPORT_SIZE = 32, 24, 32
 USAGE_PAGE, USAGE = 0xFF60, 0x61
+PRODUCT = "Corne"  # CONFIG_ZMK_KEYBOARD_NAME; other QMK/VIA boards share the usage
 POLL_S, HEARTBEAT_S = 10, 60
 UDO = "udo"
 
@@ -36,7 +37,8 @@ _TRANSLIT = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae", "Ö":
 def ascii_name(task: str) -> bytes:
     """Task name as at most 24 ASCII bytes (the display font is ASCII only)."""
     text = unicodedata.normalize("NFKD", task.translate(_TRANSLIT))
-    return text.encode("ascii", "ignore")[:NAME_LEN]
+    printable = bytes(b for b in text.encode("ascii", "ignore") if 0x20 <= b <= 0x7E)
+    return printable[:NAME_LEN]
 
 
 def encode(status: dict | None, now: datetime) -> bytes:
@@ -53,12 +55,26 @@ def encode(status: dict | None, now: datetime) -> bytes:
 
 
 def packet_for(status, now: datetime) -> bytes | None:
-    """encode(), or None (logged) if udo printed a shape we don't understand."""
+    """encode(), or None if udo printed a shape we don't understand."""
     try:
         return encode(status, now)
-    except (KeyError, ValueError, TypeError, AttributeError) as err:
-        log.warning("unexpected udo status %r: %s", status, err)
+    except (KeyError, ValueError, TypeError, AttributeError):
         return None
+
+
+class Health:
+    """Logs a failure once when it starts and once when it is over."""
+
+    def __init__(self, name: str):
+        self.name = name
+        self.ok = None
+
+    def update(self, ok: bool, message: str = "") -> None:
+        if not ok and self.ok is not False:
+            log.warning("%s", message)
+        elif ok and self.ok is False:
+            log.info("%s ok again", self.name)
+        self.ok = ok
 
 
 def changed(last: bytes | None, packet: bytes) -> bool:
@@ -81,7 +97,8 @@ class Sender:
 
     def _open(self):
         for info in self.hid.enumerate():
-            if info["usage_page"] == USAGE_PAGE and info["usage"] == USAGE:
+            if (info["usage_page"] == USAGE_PAGE and info["usage"] == USAGE
+                    and info.get("product_string") == PRODUCT):
                 dev = self.hid.device()
                 dev.open_path(info["path"])
                 self.devices.append(dev)
@@ -112,15 +129,14 @@ class Sender:
             return False
 
 
-def read_status() -> tuple[bool, dict | None]:
-    """(ok, running) from `udo status --json`; ok=False if udo failed."""
+def read_status() -> tuple[bool, dict | None, str]:
+    """(ok, running, error) from `udo status --json`; ok=False if udo failed."""
     try:
         out = subprocess.run([UDO, "status", "--json"], capture_output=True, timeout=5,
                              check=True, text=True).stdout
-        return True, json.loads(out)["running"]
-    except (OSError, subprocess.SubprocessError, ValueError, KeyError) as err:
-        log.warning("udo status failed: %s", err)
-        return False, None
+        return True, json.loads(out)["running"], ""
+    except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError) as err:
+        return False, None, f"udo status failed: {err}"
 
 
 def main() -> None:
@@ -129,9 +145,13 @@ def main() -> None:
     verbose = "--verbose" in sys.argv
     sender = None if dry_run else Sender()
     last, last_sent_at, connected = None, 0.0, None
+    udo = Health("udo")
     while True:
-        ok, running = read_status()
+        ok, running, error = read_status()
         packet = packet_for(running, datetime.now(timezone.utc)) if ok else None
+        if ok and packet is None:
+            error = f"unexpected udo status: {running!r}"
+        udo.update(packet is not None, error)
         if packet is not None:
             if changed(last, packet) or time.monotonic() - last_sent_at >= HEARTBEAT_S:
                 if dry_run:
