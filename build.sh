@@ -58,7 +58,11 @@ docker run --rm \
         while IFS="|" read -r board shield cmake_args; do
             name="${shield:+${shield// /-}-}$board"
             echo "==> $name"
-            if west build -p auto -s zmk/app -d "build/$name" -b "$board" -- \
+            # cmake-args end up in the CMake cache; start clean when they change
+            pristine=auto
+            [[ $(cat "build/$name.args" 2>/dev/null) == "$cmake_args" ]] || pristine=always
+            echo "$cmake_args" > "build/$name.args"
+            if west build -p $pristine -s zmk/app -d "build/$name" -b "$board" -- \
                 ${shield:+-DSHIELD="$shield"} \
                 -DZMK_CONFIG=/repo/config -DZMK_EXTRA_MODULES=/repo \
                 $cmake_args \
