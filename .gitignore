@@ -2,3 +2,6 @@
 firmware
 draw/keymap.yaml
 draw/overview.yaml
+.superpowers/
+host/.venv/
+__pycache__/

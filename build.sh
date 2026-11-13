@@ -23,11 +23,13 @@ case "${1:-}" in
     *) filter=$1 ;;
 esac
 
-# "board|shield" per target from build.yaml
+# "board|shield|cmake-args" per target from build.yaml (commented lines skipped)
 targets=$(awk '
-    /board:/  { if (b) print b "|" s; b = $NF; s = "" }
-    /shield:/ { sub(/.*shield: */, ""); s = $0 }
-    END       { if (b) print b "|" s }
+    /^[[:space:]]*#/ { next }
+    /board:/      { if (b) print b "|" s "|" c; b = $NF; s = ""; c = "" }
+    /shield:/     { sub(/.*shield: */, ""); s = $0 }
+    /cmake-args:/ { sub(/.*cmake-args: */, ""); c = $0 }
+    END           { if (b) print b "|" s "|" c }
 ' "$REPO/build.yaml" | grep -- "$filter" || true)
 [[ -n $targets ]] || { echo "no target matches '$filter'" >&2; exit 1; }
 
@@ -53,12 +55,13 @@ docker run --rm \
         mkdir -p build
 
         failed=0
-        while IFS="|" read -r board shield; do
+        while IFS="|" read -r board shield cmake_args; do
             name="${shield:+${shield// /-}-}$board"
             echo "==> $name"
             if west build -p auto -s zmk/app -d "build/$name" -b "$board" -- \
                 ${shield:+-DSHIELD="$shield"} \
                 -DZMK_CONFIG=/repo/config -DZMK_EXTRA_MODULES=/repo \
+                $cmake_args \
                 > "build/$name.log" 2>&1; then
                 cp "build/$name/zephyr/zmk.uf2" "/out/$name.uf2"
                 echo "    ok -> firmware/$name.uf2"
