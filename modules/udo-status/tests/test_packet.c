@@ -6,7 +6,8 @@
 
 #include <udo_status/packet.h>
 
-/* Shared with host/test_udo_keyboard.py: running, 5025 s, "lab 3" (32 bytes) */
+/* Shared with the daemon's test_udo_keyboard.py (dotfiles, ~/.config/udo-keyboard):
+ * running, 5025 s, "lab 3" (32 bytes) */
 static const uint8_t VECTOR[UDO_PACKET_MAX_LEN] = {0x55, 0x01, 0x01, 0x00, 0xa1, 0x13, 0x00,
                                                0x00, 'l',  'a',  'b',  ' ',  '3'};
 

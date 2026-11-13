@@ -14,7 +14,7 @@ displays.
 | `config/zmk-helpers/`   | Vendored keymap macros (header only)                    |
 | `vendor/zmk-auto-layer` | Vendored `num_word` behavior (C module)                 |
 | `modules/udo-status`    | udo status on the right nice!view (C module)            |
-| `host/`                 | Mac daemon feeding udo status to the keyboard           |
+| `host/probe.py`         | Raw HID probe from the udo-status bring-up (spike tool) |
 | `zephyr/module.yml`     | Registers the local modules as a Zephyr module          |
 | `build.sh`              | Local Docker build, same image as CI                    |
 
@@ -44,21 +44,23 @@ plus the task name, `idle`, or `udo ?` when nothing arrived for 3 minutes
 on top.
 
 ```
-host/udo_keyboard.py --raw HID--> left half (central_relay.c) --GATT--> right half (screen)
+udo_keyboard.py --raw HID--> left half (central_relay.c) --GATT--> right half (screen)
 ```
 
 The Mac daemon polls `udo status --json` every 10 s, sends on change and every
-60 s as a heartbeat; the right half counts the timer itself. Code lives in
-`modules/udo-status` (firmware) and `host/` (daemon).
+60 s as a heartbeat; the right half counts the timer itself. The firmware
+lives here in `modules/udo-status`; the daemon lives in the dotfiles (`udo`
+stow package → `~/.config/udo-keyboard`, see its `udo_keyboard.py` header).
 
 ```sh
-host/install.sh               # venv + LaunchAgent, starts at login
-host/install.sh --uninstall
+~/.config/udo-keyboard/install.sh               # venv + LaunchAgent, starts at login
+~/.config/udo-keyboard/install.sh --uninstall
 tail -f /tmp/udo-status.log
-host/.venv/bin/python host/udo_keyboard.py --verbose   # run by hand, log every packet
-modules/udo-status/tests/run.sh                        # firmware unit tests (host cc)
-python3 -m unittest host/test_udo_keyboard.py          # daemon unit tests
+modules/udo-status/tests/run.sh                 # firmware unit tests (host cc)
 ```
+
+The packet format below is shared by both sides: change `packet.h` and the
+daemon together (both have tests on the same 32-byte vector).
 
 Packet (32 bytes, little-endian): `[0]=0x55` magic, `[1]=0x01` version, `[2]`
 state (0 idle, 1 running), `[3]=0`, `[4..7]` elapsed seconds, `[8..31]` task
