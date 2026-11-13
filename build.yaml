@@ -6,6 +6,7 @@ include:
   - board: nice_nano_v2
     shield: corne_right nice_view_adapter nice_view
     # udo-status draws its own right screen (modules/udo-status/src/screen)
-    cmake-args: -DCONFIG_NICE_VIEW_WIDGET_STATUS=n
+    # and inverts its colors (easier to read)
+    cmake-args: -DCONFIG_NICE_VIEW_WIDGET_STATUS=n -DCONFIG_NICE_VIEW_WIDGET_INVERTED=y
   - board: nice_nano_v2
     shield: settings_reset
