@@ -30,6 +30,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 static struct bt_conn *peripheral_conn;
 static uint16_t chr_handle;
 static int attempts_left;
+static bool discovering; /* discover_params in use by Zephyr */
 static struct bt_gatt_discover_params discover_params;
 static struct bt_gatt_exchange_params mtu_params;
 /* Static: Zephyr keeps params->uuid and compares against it while responses
@@ -56,12 +57,14 @@ static void retry_discovery(void) {
 static uint8_t discover_cb(struct bt_conn *conn, const struct bt_gatt_attr *attr,
                            struct bt_gatt_discover_params *params) {
     if (!attr) {
+        discovering = false;
         if (!chr_handle) {
             retry_discovery();
         }
         return BT_GATT_ITER_STOP;
     }
     const struct bt_gatt_chrc *chrc = attr->user_data;
+    discovering = false;
     chr_handle = chrc->value_handle;
     LOG_INF("udo: characteristic at handle %u", chr_handle);
     return BT_GATT_ITER_STOP;
@@ -72,7 +75,7 @@ static void mtu_cb(struct bt_conn *conn, uint8_t err, struct bt_gatt_exchange_pa
 }
 
 static void discover_work_cb(struct k_work *work) {
-    if (!peripheral_conn || chr_handle) {
+    if (!peripheral_conn || chr_handle || discovering) {
         return;
     }
     if (attempts_left == DISCOVER_ATTEMPTS) {
@@ -90,6 +93,7 @@ static void discover_work_cb(struct k_work *work) {
         .type = BT_GATT_DISCOVER_CHARACTERISTIC,
     };
     int err = bt_gatt_discover(peripheral_conn, &discover_params);
+    discovering = err == 0;
     if (err) {
         LOG_DBG("udo: discover failed (%d), retrying", err);
         retry_discovery();
@@ -113,6 +117,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason) {
         return;
     }
     k_work_cancel_delayable(&discover_work);
+    discovering = false; /* Zephyr ends the procedure (attr NULL) on disconnect */
     bt_conn_unref(peripheral_conn);
     peripheral_conn = NULL;
     chr_handle = 0;
@@ -124,7 +129,17 @@ BT_CONN_CB_DEFINE(udo_conn_callbacks) = {
 };
 
 static void send_work_cb(struct k_work *work) {
-    if (!peripheral_conn || !chr_handle) {
+    if (!peripheral_conn) {
+        return;
+    }
+    if (!chr_handle) {
+        /* Discovery window after connect missed (busy ATT, peripheral
+         * reflashed while linked...): every host packet retries it. The MTU
+         * exchange is not repeated (attempts_left below DISCOVER_ATTEMPTS). */
+        if (!discovering && !k_work_delayable_is_pending(&discover_work)) {
+            attempts_left = DISCOVER_ATTEMPTS - 1;
+            k_work_reschedule(&discover_work, K_NO_WAIT);
+        }
         return;
     }
     uint16_t mtu = bt_gatt_get_mtu(peripheral_conn);
