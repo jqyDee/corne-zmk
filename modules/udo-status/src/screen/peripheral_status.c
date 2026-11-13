@@ -1,7 +1,8 @@
 /*
  * Vendored from ZMK v0.3 (MIT), app/boards/shields/nice_view/widgets/
  * https://github.com/zmkfirmware/zmk/tree/v0.3/app/boards/shields/nice_view
- * Change: balloon/mountain art replaced by the udo widget.
+ * Change: with CONFIG_UDO_STATUS the balloon/mountain art is replaced by the
+ * udo widget; without it this is the stock screen.
  */
 /*
  *
@@ -26,7 +27,14 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include <zmk/ble.h>
 
 #include "peripheral_status.h"
+
+#if IS_ENABLED(CONFIG_UDO_STATUS)
 #include "udo_widget.h"
+#else
+#include <zephyr/random/random.h>
+LV_IMG_DECLARE(balloon);
+LV_IMG_DECLARE(mountain);
+#endif
 
 static sys_slist_t widgets = SYS_SLIST_STATIC_INIT(&widgets);
 
@@ -116,7 +124,14 @@ int zmk_widget_status_init(struct zmk_widget_status *widget, lv_obj_t *parent) {
     lv_obj_align(top, LV_ALIGN_TOP_RIGHT, 0, 0);
     lv_canvas_set_buffer(top, widget->cbuf, CANVAS_SIZE, CANVAS_SIZE, LV_IMG_CF_TRUE_COLOR);
 
+#if IS_ENABLED(CONFIG_UDO_STATUS)
     zmk_widget_udo_init(widget->obj);
+#else
+    lv_obj_t *art = lv_img_create(widget->obj);
+    bool random = sys_rand32_get() & 1;
+    lv_img_set_src(art, random ? &balloon : &mountain);
+    lv_obj_align(art, LV_ALIGN_TOP_LEFT, 0, 0);
+#endif
 
     sys_slist_append(&widgets, &widget->node);
     widget_battery_status_init();

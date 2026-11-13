@@ -1,11 +1,13 @@
 # GitHub Actions build matrix
+# udo status on the right screen: switch with CONFIG_UDO_STATUS in config/corne.conf
 ---
 include:
   - board: nice_nano_v2
-    shield: corne_left nice_view_adapter nice_view raw_hid_adapter
+    shield: corne_left nice_view_adapter nice_view
   - board: nice_nano_v2
     shield: corne_right nice_view_adapter nice_view
-    # udo-status draws its own right screen (modules/udo-status/src/screen)
+    # The right screen comes from modules/udo-status/src/screen (udo area, or
+    # the stock look when CONFIG_UDO_STATUS=n), so the stock widget is off.
     cmake-args: -DCONFIG_NICE_VIEW_WIDGET_STATUS=n
   - board: nice_nano_v2
     shield: settings_reset

@@ -14,6 +14,7 @@ displays.
 | `config/zmk-helpers/`   | Vendored keymap macros (header only)                    |
 | `vendor/zmk-auto-layer` | Vendored `num_word` behavior (C module)                 |
 | `modules/udo-status`    | udo status on the right nice!view (C module)            |
+| `host/udo-keyboard/`    | Mac daemon for udo status (reference copy of dotfiles)  |
 | `host/probe.py`         | Raw HID probe from the udo-status bring-up (spike tool) |
 | `zephyr/module.yml`     | Registers the local modules as a Zephyr module          |
 | `build.sh`              | Local Docker build, same image as CI                    |
@@ -49,18 +50,24 @@ udo_keyboard.py --raw HID--> left half (central_relay.c) --GATT--> right half (s
 
 The Mac daemon polls `udo status --json` every 10 s, sends on change and every
 60 s as a heartbeat; the right half counts the timer itself. The firmware
-lives here in `modules/udo-status`; the daemon lives in the dotfiles (`udo`
-stow package → `~/.config/udo-keyboard`, see its `udo_keyboard.py` header).
+lives in `modules/udo-status`, the daemon in `host/udo-keyboard`. That folder
+is a reference copy: the installed one comes from the dotfiles (`udo` stow
+package → `~/.config/udo-keyboard`); `install.sh` works from either place.
+
+**On/off:** `CONFIG_UDO_STATUS` in `config/corne.conf` is the only switch.
+With `=n` the left half has no raw HID and the right shows the stock
+balloon/mountain screen. Flash both halves after changing it.
 
 ```sh
 ~/.config/udo-keyboard/install.sh               # venv + LaunchAgent, starts at login
 ~/.config/udo-keyboard/install.sh --uninstall
 tail -f /tmp/udo-status.log
 modules/udo-status/tests/run.sh                 # firmware unit tests (host cc)
+python3 -m unittest host/udo-keyboard/test_udo_keyboard.py   # daemon tests
 ```
 
 The packet format below is shared by both sides: change `packet.h` and the
-daemon together (both have tests on the same 32-byte vector).
+daemon (here and in the dotfiles) together; both test the same 32-byte vector.
 
 Packet (32 bytes, little-endian): `[0]=0x55` magic, `[1]=0x01` version, `[2]`
 state (0 idle, 1 running), `[3]=0`, `[4..7]` elapsed seconds, `[8..31]` task

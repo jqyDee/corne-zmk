@@ -1,9 +1,30 @@
+# The one switch for the whole feature: CONFIG_UDO_STATUS in config/corne.conf.
+#   central (left):     raw HID channel from the host + relay to the peripheral
+#   peripheral (right): GATT service + udo area on the nice!view
 config UDO_STATUS
     bool "Show udo time-tracking status on the peripheral's nice!view"
     default n
     depends on ZMK_SPLIT
-    # The peripheral draws its own status screen (stock one disabled there)
-    select LV_FONT_MONTSERRAT_14 if ZMK_DISPLAY && !ZMK_SPLIT_ROLE_CENTRAL
-    select LV_FONT_MONTSERRAT_16 if ZMK_DISPLAY && !ZMK_SPLIT_ROLE_CENTRAL
-    select LV_USE_IMG if ZMK_DISPLAY && !ZMK_SPLIT_ROLE_CENTRAL
-    select LV_USE_CANVAS if ZMK_DISPLAY && !ZMK_SPLIT_ROLE_CENTRAL
+    # Host -> central channel (zzeneg/zmk-raw-hid); replaces the module's
+    # raw_hid_adapter shield, so build.yaml does not change with this switch.
+    select RAW_HID if ZMK_SPLIT_ROLE_CENTRAL
+    select LV_FONT_MONTSERRAT_14 if UDO_PERIPHERAL_SCREEN
+
+# Raw HID is a second USB HID device (what raw_hid_adapter.conf set). Module
+# Kconfigs are read before Zephyr's subsys/, so this default comes first.
+config USB_HID_DEVICE_COUNT
+    default 2 if RAW_HID
+
+if SHIELD_NICE_VIEW
+
+# The right half always draws its screen from this module (build.yaml sets
+# CONFIG_NICE_VIEW_WIDGET_STATUS=n there; the nice!view shield's `imply`
+# cannot be overridden from Kconfig). With UDO_STATUS=n it is the stock look.
+config UDO_PERIPHERAL_SCREEN
+    bool
+    default y if ZMK_DISPLAY && ZMK_DISPLAY_STATUS_SCREEN_CUSTOM && !ZMK_SPLIT_ROLE_CENTRAL && !NICE_VIEW_WIDGET_STATUS
+    select LV_FONT_MONTSERRAT_16
+    select LV_USE_IMG
+    select LV_USE_CANVAS
+
+endif # SHIELD_NICE_VIEW
