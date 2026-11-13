@@ -57,12 +57,30 @@ static void test_view_time_no_overflow(void) {
     assert(strlen(v.time) < sizeof(v.time));
 }
 
+static void test_next_tick(void) {
+    struct udo_status idle = {.running = false};
+    /* running: next minute change of the shown timer (5025 s -> 15 s) */
+    assert(udo_view_next_tick_s(&RUNNING, true, 0) == 15);
+    /* local count included: 5025 s + 10 s -> 5 s to the next minute */
+    assert(udo_view_next_tick_s(&RUNNING, true, 10000) == 5);
+    /* stale comes first: 180 s limit, 170 s old -> 11 s (just past it) */
+    struct udo_status on_minute = RUNNING;
+    on_minute.elapsed_s = 3600 - 170;
+    assert(udo_view_next_tick_s(&on_minute, true, 170000) == 11);
+    /* idle: wake up exactly when it turns stale */
+    assert(udo_view_next_tick_s(&idle, true, 150000) == 31);
+    /* no data or already stale: nothing changes on its own, slow tick */
+    assert(udo_view_next_tick_s(&idle, false, 0) == 60);
+    assert(udo_view_next_tick_s(&RUNNING, true, 200000) == 60);
+}
+
 int main(void) {
     test_view_running_format();
     test_view_keeps_24_char_name();
     test_view_idle();
     test_stale_after_timeout();
     test_view_time_no_overflow();
+    test_next_tick();
     puts("test_view: OK");
     return 0;
 }

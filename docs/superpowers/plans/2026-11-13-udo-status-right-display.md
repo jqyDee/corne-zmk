@@ -19,6 +19,11 @@
 
 ## Global Constraints
 
+> **Superseded during execution (2026-11-13):** the packet became 20..32 bytes
+> (24-char name, `[8..31]`); the central requests a larger ATT MTU and falls
+> back to the 20-byte form with a 12-char name. The udo area is 68x140, not
+> 68x68. See readme "udo on the right screen" for the final format.
+
 - ZMK stays pinned to `revision: v0.3` in `config/west.yml`. Pin `zmk-raw-hid` to a commit SHA, not `main`.
 - The packet is exactly 20 bytes, so it fits one ATT write at the default MTU of 23. The raw HID report is that packet zero-padded to `CONFIG_RAW_HID_REPORT_SIZE=32`.
 - Packet layout (little-endian): `[0]=0x55` magic, `[1]=0x01` version, `[2]` state (`0`=idle, `1`=running), `[3]=0x00` reserved, `[4..7]` elapsed seconds as `uint32`, `[8..19]` task name as 12 bytes of ASCII, NUL-padded with no terminator required.

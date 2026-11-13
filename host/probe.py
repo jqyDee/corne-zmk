@@ -1,7 +1,8 @@
 """Task 1 spike: check that raw HID reports reach the central (left) half.
 
-The spike firmware echoes every received report back, so this script needs
-no serial console:
+Only useful with the Task 1 spike firmware (commit 4582d71), which echoed
+every received report back. The final firmware does not echo, so `send`
+always reports "no match" there; `list` still shows the raw HID devices.
 
     host/.venv/bin/python host/probe.py list
     host/.venv/bin/python host/probe.py send

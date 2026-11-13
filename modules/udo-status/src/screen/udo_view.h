@@ -21,3 +21,7 @@ struct udo_view {
  * since it arrived; extra_s: seconds to add to s->elapsed_s (local count). */
 void udo_view_build(const struct udo_status *s, bool have_data, int64_t age_ms,
                     uint32_t extra_s, struct udo_view *out);
+
+/* Seconds until the view next changes by itself: the shown minute ticks over
+ * (running) or the data turns stale, whichever is first; 60 if neither. */
+uint32_t udo_view_next_tick_s(const struct udo_status *s, bool have_data, int64_t age_ms);

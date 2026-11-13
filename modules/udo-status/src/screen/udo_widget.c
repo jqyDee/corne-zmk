@@ -3,7 +3,7 @@
  *
  * Packets arrive as udo_status_changed events (see peripheral_service.c). The
  * timer counts locally from the last packet and redraws on each minute change;
- * a 60 s tick also turns the view to "udo ?" once data is stale.
+ * the tick also wakes up right when data turns stale (180 s) for "udo ?".
  *
  * Layout: the area is 68 wide x 140 tall as you look at the keyboard,
  * starting right under the battery/connection row of the top canvas. LVGL
@@ -11,6 +11,7 @@
  * 90 degrees (like util.c's rotate_canvas, but not square) into the visible
  * landscape canvas, because the nice!view is mounted sideways.
  */
+#include <stdio.h>
 #include <string.h>
 
 #include <zephyr/kernel.h>
@@ -80,7 +81,7 @@ static void draw_view(const struct udo_view *v) {
     rotate_into_display();
 }
 
-/* Redraw if the view changed; return seconds until the next minute change. */
+/* Redraw if the view changed; return seconds until it changes by itself. */
 static uint32_t refresh(void) {
     int64_t age_ms = shown.have_data ? k_uptime_get() - shown.received_at : 0;
     uint32_t extra_s = (uint32_t)(age_ms / 1000);
@@ -92,10 +93,7 @@ static uint32_t refresh(void) {
         drawn = v;
         drawn_valid = true;
     }
-    if (v.kind == UDO_VIEW_RUNNING) {
-        return 60 - (shown.status.elapsed_s + extra_s) % 60;
-    }
-    return 60;
+    return udo_view_next_tick_s(&shown.status, shown.have_data, age_ms);
 }
 
 static void tick_cb(struct k_work *work) {
