@@ -8,8 +8,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 import udo_keyboard as uk  # noqa: E402
 
 NOW = datetime(2026, 11, 13, 12, 0, 0, tzinfo=timezone.utc)
-# Shared with the firmware tests: running, 5025 s, "lab 3"
-SHARED_VECTOR = bytes.fromhex("55010100a11300006c61622033000000" "00000000")
+# Shared with the firmware tests: running, 5025 s, "lab 3" (32 bytes)
+SHARED_VECTOR = bytes.fromhex("55010100a11300006c61622033000000") + bytes(16)
 
 
 def running(task, started):
@@ -22,11 +22,11 @@ class EncodeTest(unittest.TestCase):
         self.assertEqual(packet, SHARED_VECTOR)
 
     def test_encode_idle(self):
-        self.assertEqual(uk.encode(None, NOW), bytes([0x55, 1, 0, 0]) + bytes(16))
+        self.assertEqual(uk.encode(None, NOW), bytes([0x55, 1, 0, 0]) + bytes(28))
 
     def test_name_transliterated_and_truncated(self):
-        self.assertEqual(uk.ascii_name("Übung Größe 🚀 extra"), b"Uebung Groes")
-        self.assertEqual(len(uk.ascii_name("x" * 40)), 12)
+        self.assertEqual(uk.ascii_name("Übung Größe 🚀 extra lang"), b"Uebung Groesse  extra la")
+        self.assertEqual(len(uk.ascii_name("x" * 40)), 24)
 
     def test_negative_elapsed_clamped(self):
         packet = uk.encode(running("t", NOW + timedelta(minutes=5)), NOW)
@@ -82,7 +82,7 @@ class SenderTest(unittest.TestCase):
         sender.send(SHARED_VECTOR)
         sender.send(SHARED_VECTOR)
         writes = [e[1] for e in fake.log if e[0] == "write"]
-        self.assertEqual(writes[-1], b"\x00" + SHARED_VECTOR + bytes(12))
+        self.assertEqual(writes[-1], b"\x00" + SHARED_VECTOR)
 
     def test_no_device_returns_false(self):
         fake = FakeHid()

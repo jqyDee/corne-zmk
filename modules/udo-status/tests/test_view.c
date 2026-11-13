@@ -24,6 +24,14 @@ static void test_view_running_format(void) {
     assert(strcmp(v.time, "10:00") == 0);
 }
 
+static void test_view_keeps_24_char_name(void) {
+    struct udo_status s = RUNNING;
+    strcpy(s.name, "abcdefghijklmnopqrstuvwx");
+    struct udo_view v;
+    udo_view_build(&s, true, 0, 0, &v);
+    assert(strcmp(v.name, "abcdefghijklmnopqrstuvwx") == 0);
+}
+
 static void test_view_idle(void) {
     struct udo_status idle = {.running = false};
     struct udo_view v;
@@ -51,6 +59,7 @@ static void test_view_time_no_overflow(void) {
 
 int main(void) {
     test_view_running_format();
+    test_view_keeps_24_char_name();
     test_view_idle();
     test_stale_after_timeout();
     test_view_time_no_overflow();

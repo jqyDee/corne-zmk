@@ -4,7 +4,10 @@
  *
  * The characteristic is discovered a few seconds after the split connection
  * comes up (ZMK runs its own discovery first) and forgotten on disconnect.
- * The host re-sends every 60 s, so nothing is cached here.
+ * ZMK leaves the ATT MTU at 23 (20-byte writes), so we ask for a larger one
+ * first; full 32-byte packets go out once it is granted, else the 20-byte
+ * short form (task name cut to 12). The host re-sends every 60 s, so
+ * nothing is cached here.
  */
 #include <string.h>
 
@@ -28,6 +31,7 @@ static struct bt_conn *peripheral_conn;
 static uint16_t chr_handle;
 static int attempts_left;
 static struct bt_gatt_discover_params discover_params;
+static struct bt_gatt_exchange_params mtu_params;
 /* Static: Zephyr keeps params->uuid and compares against it while responses
  * arrive, after discover_work_cb has returned (UDO_CHR_UUID is a compound
  * literal with automatic storage inside a function). */
@@ -36,7 +40,8 @@ static const struct bt_uuid_128 chr_uuid = BT_UUID_INIT_128(UDO_CHR_UUID_VAL);
 static void discover_work_cb(struct k_work *work);
 static K_WORK_DELAYABLE_DEFINE(discover_work, discover_work_cb);
 
-static uint8_t pending[UDO_PACKET_LEN];
+static uint8_t pending[UDO_PACKET_MAX_LEN];
+static size_t pending_len;
 static void send_work_cb(struct k_work *work);
 static K_WORK_DEFINE(send_work, send_work_cb);
 
@@ -62,9 +67,20 @@ static uint8_t discover_cb(struct bt_conn *conn, const struct bt_gatt_attr *attr
     return BT_GATT_ITER_STOP;
 }
 
+static void mtu_cb(struct bt_conn *conn, uint8_t err, struct bt_gatt_exchange_params *params) {
+    LOG_INF("udo: ATT MTU %u (err %u)", bt_gatt_get_mtu(conn), err);
+}
+
 static void discover_work_cb(struct k_work *work) {
     if (!peripheral_conn || chr_handle) {
         return;
+    }
+    if (attempts_left == DISCOVER_ATTEMPTS) {
+        mtu_params.func = mtu_cb;
+        int err = bt_gatt_exchange_mtu(peripheral_conn, &mtu_params);
+        if (err) {
+            LOG_DBG("udo: MTU exchange not started (%d)", err);
+        }
     }
     discover_params = (struct bt_gatt_discover_params){
         .uuid = &chr_uuid.uuid,
@@ -111,8 +127,12 @@ static void send_work_cb(struct k_work *work) {
     if (!peripheral_conn || !chr_handle) {
         return;
     }
-    int err = bt_gatt_write_without_response(peripheral_conn, chr_handle, pending,
-                                             sizeof(pending), false);
+    uint16_t mtu = bt_gatt_get_mtu(peripheral_conn);
+    if (mtu < UDO_PACKET_MIN_LEN + 3) {
+        return;
+    }
+    size_t len = pending_len > (size_t)(mtu - 3) ? UDO_PACKET_MIN_LEN : pending_len;
+    int err = bt_gatt_write_without_response(peripheral_conn, chr_handle, pending, len, false);
     if (err) {
         LOG_DBG("udo: write failed (%d)", err);
     }
@@ -122,7 +142,8 @@ static int raw_hid_listener(const zmk_event_t *eh) {
     const struct raw_hid_received_event *ev = as_raw_hid_received_event(eh);
     struct udo_status ignored;
     if (ev && udo_packet_decode(ev->data, ev->length, &ignored) == 0) {
-        memcpy(pending, ev->data, UDO_PACKET_LEN);
+        pending_len = ev->length > UDO_PACKET_MAX_LEN ? UDO_PACKET_MAX_LEN : ev->length;
+        memcpy(pending, ev->data, pending_len);
         k_work_submit(&send_work);
     }
     return ZMK_EV_EVENT_BUBBLE;

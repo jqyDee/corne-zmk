@@ -9,8 +9,8 @@ heartbeat (the right half shows "udo ?" after 180 s without one).
     host/.venv/bin/python host/udo_keyboard.py --dry-run  print packets, don't send
     host/.venv/bin/python host/udo_keyboard.py --verbose  send and log every packet
 
-Packet (little-endian): [0]=0x55 magic, [1]=0x01 version, [2] state
-(0 idle, 1 running), [3]=0, [4..7] elapsed seconds (uint32), [8..19] task name,
+Packet (32 bytes, little-endian): [0]=0x55 magic, [1]=0x01 version, [2] state
+(0 idle, 1 running), [3]=0, [4..7] elapsed seconds (uint32), [8..31] task name,
 ASCII, NUL-padded.
 """
 import json
@@ -22,7 +22,7 @@ import unicodedata
 from datetime import datetime, timezone
 
 MAGIC, VERSION = 0x55, 0x01
-PACKET_LEN, NAME_LEN, REPORT_SIZE = 20, 12, 32
+PACKET_LEN, NAME_LEN, REPORT_SIZE = 32, 24, 32
 USAGE_PAGE, USAGE = 0xFF60, 0x61
 POLL_S, HEARTBEAT_S = 10, 60
 UDO = "udo"
@@ -34,13 +34,13 @@ _TRANSLIT = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae", "Ö":
 
 
 def ascii_name(task: str) -> bytes:
-    """Task name as at most 12 ASCII bytes (the display font is ASCII only)."""
+    """Task name as at most 24 ASCII bytes (the display font is ASCII only)."""
     text = unicodedata.normalize("NFKD", task.translate(_TRANSLIT))
     return text.encode("ascii", "ignore")[:NAME_LEN]
 
 
 def encode(status: dict | None, now: datetime) -> bytes:
-    """20-byte packet for the `running` object of `udo status --json` (None = idle)."""
+    """32-byte packet for the `running` object of `udo status --json` (None = idle)."""
     if status is None:
         return bytes([MAGIC, VERSION, 0, 0]) + bytes(PACKET_LEN - 4)
     started = datetime.fromisoformat(status["started"])

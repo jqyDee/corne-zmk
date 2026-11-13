@@ -60,9 +60,11 @@ modules/udo-status/tests/run.sh                        # firmware unit tests (ho
 python3 -m unittest host/test_udo_keyboard.py          # daemon unit tests
 ```
 
-Packet (20 bytes, little-endian): `[0]=0x55` magic, `[1]=0x01` version, `[2]`
-state (0 idle, 1 running), `[3]=0`, `[4..7]` elapsed seconds, `[8..19]` task
-name (ASCII, NUL-padded; umlauts transliterated). After flashing a left half
+Packet (32 bytes, little-endian): `[0]=0x55` magic, `[1]=0x01` version, `[2]`
+state (0 idle, 1 running), `[3]=0`, `[4..7]` elapsed seconds, `[8..31]` task
+name (24 chars, ASCII, NUL-padded; umlauts transliterated). The left half asks
+the right half for a larger ATT MTU; if it is not granted it sends the first
+20 bytes only (name cut to 12). After flashing a left half
 with a new GATT layout, macOS may need the keyboard removed and re-paired.
 
 ## Keymap drawing
