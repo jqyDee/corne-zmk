@@ -13,7 +13,9 @@ displays.
 | `build.yaml`            | Build matrix: left, right, `settings_reset`             |
 | `config/zmk-helpers/`   | Vendored keymap macros (header only)                    |
 | `vendor/zmk-auto-layer` | Vendored `num_word` behavior (C module)                 |
-| `zephyr/module.yml`     | Registers `vendor/zmk-auto-layer` as a Zephyr module    |
+| `modules/udo-status`    | udo status on the right nice!view (C module)            |
+| `host/`                 | Mac daemon feeding udo status to the keyboard           |
+| `zephyr/module.yml`     | Registers the local modules as a Zephyr module          |
 | `build.sh`              | Local Docker build, same image as CI                    |
 
 Push to GitHub and the Actions workflow builds the firmware. Download the
@@ -33,6 +35,35 @@ Needs Docker running. Uses the same image as GitHub Actions.
 The first run downloads ZMK + Zephyr (~2 min). After that, a rebuild takes a
 few seconds. On failure the error lines are printed and the full log is saved
 next to the firmware.
+
+## udo on the right screen
+
+The right nice!view shows what `udo` (time tracker CLI) is timing: `▶ 1:23`
+plus the task name, `idle`, or `udo ?` when nothing arrived for 3 minutes
+(daemon not running, keyboard on another host). Battery and connection stay
+on top; the right screen is inverted.
+
+```
+host/udo_keyboard.py --raw HID--> left half (central_relay.c) --GATT--> right half (screen)
+```
+
+The Mac daemon polls `udo status --json` every 10 s, sends on change and every
+60 s as a heartbeat; the right half counts the timer itself. Code lives in
+`modules/udo-status` (firmware) and `host/` (daemon).
+
+```sh
+host/install.sh               # venv + LaunchAgent, starts at login
+host/install.sh --uninstall
+tail -f /tmp/udo-status.log
+host/.venv/bin/python host/udo_keyboard.py --verbose   # run by hand, log every packet
+modules/udo-status/tests/run.sh                        # firmware unit tests (host cc)
+python3 -m unittest host/test_udo_keyboard.py          # daemon unit tests
+```
+
+Packet (20 bytes, little-endian): `[0]=0x55` magic, `[1]=0x01` version, `[2]`
+state (0 idle, 1 running), `[3]=0`, `[4..7]` elapsed seconds, `[8..19]` task
+name (ASCII, NUL-padded; umlauts transliterated). After flashing a left half
+with a new GATT layout, macOS may need the keyboard removed and re-paired.
 
 ## Keymap drawing
 

@@ -4,7 +4,12 @@ if(CONFIG_UDO_STATUS)
   zephyr_include_directories(include)
   target_sources(app PRIVATE src/packet.c src/event.c)
 
-  if(NOT CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+  if(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+    # Needs zmk-raw-hid (raw_hid_adapter shield on the central build)
+    if(CONFIG_RAW_HID)
+      target_sources(app PRIVATE src/central_relay.c)
+    endif()
+  else()
     target_sources(app PRIVATE src/peripheral_service.c)
 
     # Replaces the stock nice!view peripheral screen; needs
