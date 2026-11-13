@@ -7,6 +7,7 @@ heartbeat (the right half shows "udo ?" after 180 s without one).
 
     host/.venv/bin/python host/udo_keyboard.py            run forever
     host/.venv/bin/python host/udo_keyboard.py --dry-run  print packets, don't send
+    host/.venv/bin/python host/udo_keyboard.py --verbose  send and log every packet
 
 Packet (little-endian): [0]=0x55 magic, [1]=0x01 version, [2] state
 (0 idle, 1 running), [3]=0, [4..7] elapsed seconds (uint32), [8..19] task name,
@@ -114,6 +115,7 @@ def read_status() -> tuple[bool, dict | None]:
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
     dry_run = "--dry-run" in sys.argv
+    verbose = "--verbose" in sys.argv
     sender = None if dry_run else Sender()
     last, last_sent_at, connected = None, 0.0, None
     while True:
@@ -126,6 +128,8 @@ def main() -> None:
                     sent = True
                 else:
                     sent = sender.send(packet)
+                    if verbose:
+                        log.info("%s %s", "sent" if sent else "failed", packet.hex(" "))
                     if sent != connected:
                         log.info("keyboard %s", "connected" if sent else "not reachable, retrying")
                         connected = sent
