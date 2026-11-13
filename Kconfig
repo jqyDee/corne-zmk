@@ -1,1 +1,2 @@
 rsource "vendor/zmk-auto-layer/Kconfig"
+rsource "modules/udo-status/Kconfig"
