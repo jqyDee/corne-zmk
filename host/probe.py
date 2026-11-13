@@ -6,9 +6,11 @@ no serial console:
     host/.venv/bin/python host/probe.py list
     host/.venv/bin/python host/probe.py send
 
-Finding (filled in after the hardware test):
-    BLE: TBD
-    USB: TBD
+Finding (2026-11-13, macOS, ZMK v0.3 + zmk-raw-hid 6a37765):
+    BLE: works with a leading 0x00 report-ID byte (33-byte write).
+    USB: works with and without the prefix.
+    With USB plugged in, BLE and USB each show up as a device; both work.
+    -> host daemon always prefixes 0x00 and writes to every matching device.
 """
 import sys
 
