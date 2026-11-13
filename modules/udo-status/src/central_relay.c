@@ -28,6 +28,10 @@ static struct bt_conn *peripheral_conn;
 static uint16_t chr_handle;
 static int attempts_left;
 static struct bt_gatt_discover_params discover_params;
+/* Static: Zephyr keeps params->uuid and compares against it while responses
+ * arrive, after discover_work_cb has returned (UDO_CHR_UUID is a compound
+ * literal with automatic storage inside a function). */
+static const struct bt_uuid_128 chr_uuid = BT_UUID_INIT_128(UDO_CHR_UUID_VAL);
 
 static void discover_work_cb(struct k_work *work);
 static K_WORK_DELAYABLE_DEFINE(discover_work, discover_work_cb);
@@ -63,7 +67,7 @@ static void discover_work_cb(struct k_work *work) {
         return;
     }
     discover_params = (struct bt_gatt_discover_params){
-        .uuid = UDO_CHR_UUID,
+        .uuid = &chr_uuid.uuid,
         .func = discover_cb,
         .start_handle = BT_ATT_FIRST_ATTRIBUTE_HANDLE,
         .end_handle = BT_ATT_LAST_ATTRIBUTE_HANDLE,
