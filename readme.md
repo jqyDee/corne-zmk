@@ -41,7 +41,7 @@ next to the firmware.
 The right nice!view shows what `udo` (time tracker CLI) is timing: `▶ 1:23`
 plus the task name, `idle`, or `udo ?` when nothing arrived for 3 minutes
 (daemon not running, keyboard on another host). Battery and connection stay
-on top; the right screen is inverted.
+on top.
 
 ```
 host/udo_keyboard.py --raw HID--> left half (central_relay.c) --GATT--> right half (screen)
