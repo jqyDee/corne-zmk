@@ -38,6 +38,23 @@ class EncodeTest(unittest.TestCase):
         self.assertEqual(int.from_bytes(packet[4:8], "little"), 60)
 
 
+class MalformedStatusTest(unittest.TestCase):
+    def test_naive_started_is_local_time(self):
+        local_now = NOW.astimezone()
+        started = (local_now - timedelta(seconds=90)).replace(tzinfo=None).isoformat()
+        packet = uk.packet_for({"task": "t", "started": started}, NOW)
+        self.assertEqual(int.from_bytes(packet[4:8], "little"), 90)
+
+    def test_malformed_status_skipped(self):
+        for bad in ({"started": NOW.isoformat()}, {"task": "t"},
+                    {"task": "t", "started": "not a time"}, "running", 42):
+            self.assertIsNone(uk.packet_for(bad, NOW), bad)
+
+    def test_packet_for_valid_matches_encode(self):
+        status = running("lab 3", NOW - timedelta(seconds=5025))
+        self.assertEqual(uk.packet_for(status, NOW), SHARED_VECTOR)
+
+
 class FakeDevice:
     def __init__(self, log):
         self.log = log

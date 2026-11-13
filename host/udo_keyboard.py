@@ -44,10 +44,21 @@ def encode(status: dict | None, now: datetime) -> bytes:
     if status is None:
         return bytes([MAGIC, VERSION, 0, 0]) + bytes(PACKET_LEN - 4)
     started = datetime.fromisoformat(status["started"])
+    if started.tzinfo is None:
+        started = started.astimezone()  # no offset: local time
     elapsed = min(max(int((now - started).total_seconds()), 0), 2**32 - 1)
     name = ascii_name(status["task"])
     return (bytes([MAGIC, VERSION, 1, 0]) + elapsed.to_bytes(4, "little")
             + name + bytes(NAME_LEN - len(name)))
+
+
+def packet_for(status, now: datetime) -> bytes | None:
+    """encode(), or None (logged) if udo printed a shape we don't understand."""
+    try:
+        return encode(status, now)
+    except (KeyError, ValueError, TypeError, AttributeError) as err:
+        log.warning("unexpected udo status %r: %s", status, err)
+        return None
 
 
 def changed(last: bytes | None, packet: bytes) -> bool:
@@ -120,8 +131,8 @@ def main() -> None:
     last, last_sent_at, connected = None, 0.0, None
     while True:
         ok, running = read_status()
-        if ok:
-            packet = encode(running, datetime.now(timezone.utc))
+        packet = packet_for(running, datetime.now(timezone.utc)) if ok else None
+        if packet is not None:
             if changed(last, packet) or time.monotonic() - last_sent_at >= HEARTBEAT_S:
                 if dry_run:
                     log.info("packet %s", packet.hex(" "))
